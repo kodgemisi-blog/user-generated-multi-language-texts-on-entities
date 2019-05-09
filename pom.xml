@@ -12,15 +12,15 @@
 	<artifactId>multi-language-text-fields</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>multilanguage</name>
-	<description>Multilanguage Support for Column with Postgres Database</description>
+	<description>Multi Language Support for Column with Postgres Database</description>
 
     <organization>
-        <name>Kod Gemisi</name>
-        <url>https://kodgemisi.com/</url>
+        <name>Kod Gemisi Blog</name>
+        <url>https://blog.kodgemisi.com/</url>
     </organization>
 
     <scm>
-        <url>https://github.com/ersanceylan/multi-language-column</url>
+        <url>https://github.com/kodgemisi-blog/user-generated-multi-language-texts-on-entities</url>
     </scm>
 
 	<properties>
@@ -107,6 +107,9 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <!-- We add `images/` prefix manually in `readme.adoc` in order to show images on
+                    Github's project page where readme is parsed by Github and {imagesdir} is not available. -->
+                    <imagesDir>./</imagesDir>
                     <backend>html5</backend>
                     <sourceDirectory>${basedir}</sourceDirectory>
                     <sourceDocumentName>README.adoc</sourceDocumentName>
@@ -123,6 +126,7 @@
                         <revdate>${maven.build.timestamp}</revdate>
                         <revremark>Kod Gemisi</revremark>
                         <scmurl>${project.scm.url}</scmurl>
+                        <blogurl>${project.organization.url}</blogurl>
                     </attributes>
                 </configuration>
             </plugin>

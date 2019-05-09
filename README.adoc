@@ -9,9 +9,9 @@ Ersan Ceylan
 
 Implementing dynamic i18n support for user generated content.
 
-image::image1.png[Screenshot 1]
+image::images/image1.png[Screenshot 1]
 
-image::image2.png[Screenshot 2]
+image::images/image2.png[Screenshot 2]
 
 ## Getting Started
 
