@@ -9,9 +9,7 @@ Ersan Ceylan
 
 Implementing dynamic i18n support for user generated content.
 
-image::images/image1.png[Screenshot 1]
-
-image::images/image2.png[Screenshot 2]
+image::images/usage.gif[options=autoplay]
 
 ## Getting Started
 
@@ -244,4 +242,6 @@ If we inspect the rendered source code, there are input elements as many as the 
 </div>
 ----
 
-video::images/usage.mp4[width=640, options=autoplay]
+image::images/image1.png[Screenshot 1]
+
+image::images/image2.png[Screenshot 2]
