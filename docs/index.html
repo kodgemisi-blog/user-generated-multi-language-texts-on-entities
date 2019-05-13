@@ -523,6 +523,36 @@ table.CodeRay td.code>pre{padding:0}
 .CodeRay .head .head{color:#f4f}
 </style>
 <link rel="stylesheet" href="https://docs.spring.io/spring/docs/5.0.x/spring-framework-reference/stylesheets/asciidoctor-spring.css" />
+
+<style>
+    /*The same style with #header, #content, #footnotes, #footer which is located in asciidoctor-spring.css*/
+    #comments {
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 0;
+        margin-bottom: 0;
+        max-width: 62.5em;
+        *zoom: 1;
+        position: relative;
+        padding-left: 0.9375em;
+        padding-right: 0.9375em;
+    }
+
+    #footer {
+        margin-top: 10vh;
+    }
+
+    #footer-text a {
+        color: white;
+        text-decoration: none;
+        line-height: inherit;
+    }
+
+    #footer-text a:hover,a:focus {
+        text-decoration: underline;
+    }
+</style>
 </head>
 <body class="article toc2 toc-left">
 <div id="header">
@@ -845,20 +875,27 @@ to a Map object.</p>
 </div>
 </div>
 </div>
+<section id="comments">
+    <h2 id="_view">Comments</h2>
+
+    <div id="disqus_thread"></div>
+    <script>
+        var disqus_config = function () {
+            this.page.url = "https://kodgemisi-blog.github.io/user-generated-multi-language-texts-on-entities/";
+            this.page.identifier = "multi-language-text-fields";
+        };
+
+        (function() { // DON'T EDIT BELOW THIS LINE
+            var d = document, s = d.createElement('script');
+            s.src = 'https://kod-gemisi-github-blog.disqus.com/embed.js';
+            s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
 <div id="footer">
-
-    <style>
-        #footer-text a {
-            color: white;
-            text-decoration: none;
-            line-height: inherit;
-        }
-
-        #footer-text a:hover,a:focus {
-            text-decoration: underline;
-        }
-    </style>
-
     <a href="https://kodgemisi.com/" target="_blank" style="float: right;">
         <img src="images/kodgemisi-logo.png" style="filter: brightness(0) invert(1);width: 200px;">
     </a>

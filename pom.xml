@@ -19,6 +19,8 @@
         <url>https://blog.kodgemisi.com/</url>
     </organization>
 
+    <url>https://kodgemisi-blog.github.io/user-generated-multi-language-texts-on-entities/</url>
+
     <scm>
         <url>https://github.com/kodgemisi-blog/user-generated-multi-language-texts-on-entities</url>
     </scm>
@@ -127,6 +129,8 @@
                         <revremark>Kod Gemisi</revremark>
                         <scmurl>${project.scm.url}</scmurl>
                         <blogurl>${project.organization.url}</blogurl>
+                        <blogpageurl>${project.url}</blogpageurl>
+                        <pageidentifier>${project.artifactId}</pageidentifier>
                     </attributes>
                 </configuration>
             </plugin>
