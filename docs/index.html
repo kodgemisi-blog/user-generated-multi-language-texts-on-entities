@@ -529,17 +529,21 @@ table.CodeRay td.code>pre{padding:0}
 <h1>Multi Language Input Texts with Spring Boot and PostgreSQL</h1>
 <div class="details">
 <span id="author" class="author">Ersan Ceylan</span><br>
-<span id="revdate">2019-05-09</span>
+<span id="revdate">2019-05-13</span>
 <br><span id="revremark">Kod Gemisi</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
-<li><a href="#_getting_started">Getting Started</a>
+<li><a href="#_getting_started">Getting Started</a></li>
+<li><a href="#_setup_a_database">Setup a database</a>
 <ul class="sectlevel2">
-<li><a href="#_setup_a_database">Setup a database</a></li>
+<li><a href="#_creating_a_test_database">Creating a test database</a></li>
 </ul>
 </li>
+<li><a href="#_create_entities">Create Entities</a></li>
+<li><a href="#_configuration">Configuration</a></li>
+<li><a href="#_view">View</a></li>
 </ul>
 </div>
 </div>
@@ -565,10 +569,20 @@ table.CodeRay td.code>pre{padding:0}
 <h2 id="_getting_started">Getting Started</h2>
 <div class="sectionbody">
 <div class="paragraph">
+<p>As shown in the above screenshot, we needed to provide users to be able to set translations
+for all possible languages. At first glance, it looks like a basic <code>oneToMany</code> relation but
+it will get harder to make joins for each field that supports i18n field.
+Then we&#8217;ve found that postgres has a solution for <code>json</code> data
+and combined with hibernate perfectly.</p>
+</div>
+<div class="paragraph">
 <p><em>Source code link is in the footer</em>.</p>
 </div>
-<div class="sect2">
-<h3 id="_setup_a_database">Setup a database</h3>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_setup_a_database">Setup a database</h2>
+<div class="sectionbody">
 <div class="paragraph">
 <p>Tested with following database version on Ubuntu <code>Ubuntu 18.04.2 LTS</code>.</p>
 </div>
@@ -578,8 +592,8 @@ table.CodeRay td.code>pre{padding:0}
 psql (PostgreSQL) 10.7 (Ubuntu 10.7-0ubuntu0.18.04.1)</code></pre>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_creating_a_test_database">Creating a test database</h4>
+<div class="sect2">
+<h3 id="_creating_a_test_database">Creating a test database</h3>
 <div class="listingblock">
 <div class="content">
 <pre class="CodeRay highlight"><code data-lang="bash">$ sudo -u postgres createuser --interactive --pwprompt demouser
@@ -609,6 +623,225 @@ You can safely ignore <code>could not change directory to &#8230;&#8203;</code> 
 </tr>
 </table>
 </div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_create_entities">Create Entities</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>There are two entities named <code>Product</code> and <code>MultiLanguageText</code></p>
+</div>
+<div class="listingblock">
+<div class="title">Product.java</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="java"><span class="annotation">@TypeDef</span>(name = <span class="string"><span class="delimiter">&quot;</span><span class="content">jsonb</span><span class="delimiter">&quot;</span></span>, typeClass = JsonBinaryType.class)
+<span class="annotation">@Getter</span>
+<span class="annotation">@Setter</span>
+<span class="annotation">@Entity</span>
+<span class="type">class</span> <span class="class">Product</span> {
+
+        <span class="annotation">@Id</span>
+        <span class="annotation">@GeneratedValue</span>
+        <span class="directive">private</span> <span class="predefined-type">Long</span> id;
+
+        <span class="annotation">@Embedded</span>
+        <span class="annotation">@AttributeOverride</span>(name = <span class="string"><span class="delimiter">&quot;</span><span class="content">texts</span><span class="delimiter">&quot;</span></span>, column = <span class="annotation">@Column</span>(name = <span class="string"><span class="delimiter">&quot;</span><span class="content">name</span><span class="delimiter">&quot;</span></span>, columnDefinition = <span class="string"><span class="delimiter">&quot;</span><span class="content">jsonb</span><span class="delimiter">&quot;</span></span>))
+        <span class="directive">private</span> MultiLanguageText name;
+
+        <span class="annotation">@Embedded</span>
+        <span class="annotation">@AttributeOverride</span>(name = <span class="string"><span class="delimiter">&quot;</span><span class="content">texts</span><span class="delimiter">&quot;</span></span>, column = <span class="annotation">@Column</span>(name = <span class="string"><span class="delimiter">&quot;</span><span class="content">description</span><span class="delimiter">&quot;</span></span>, columnDefinition = <span class="string"><span class="delimiter">&quot;</span><span class="content">jsonb</span><span class="delimiter">&quot;</span></span>))
+        <span class="directive">private</span> MultiLanguageText description;
+
+        <span class="directive">private</span> <span class="predefined-type">BigDecimal</span> price;
+
+}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">MultiLanguageText.java</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="java"><span class="annotation">@Embeddable</span>
+<span class="annotation">@NoArgsConstructor</span>
+<span class="annotation">@TypeDef</span>(name = <span class="string"><span class="delimiter">&quot;</span><span class="content">jsonb</span><span class="delimiter">&quot;</span></span>, typeClass = JsonBinaryType.class)
+<span class="type">class</span> <span class="class">MultiLanguageText</span> <span class="directive">implements</span> <span class="predefined-type">Serializable</span> {
+
+        <span class="annotation">@Type</span>(type = <span class="string"><span class="delimiter">&quot;</span><span class="content">jsonb</span><span class="delimiter">&quot;</span></span>)
+        <span class="annotation">@Column</span>(columnDefinition = <span class="string"><span class="delimiter">&quot;</span><span class="content">jsonb</span><span class="delimiter">&quot;</span></span>)
+        <span class="directive">private</span> <span class="predefined-type">Map</span>&lt;<span class="predefined-type">String</span>, <span class="predefined-type">String</span>&gt; texts = <span class="keyword">new</span> <span class="predefined-type">HashMap</span>&lt;&gt;();
+
+        MultiLanguageText(<span class="predefined-type">Map</span>&lt;<span class="predefined-type">String</span>, <span class="predefined-type">String</span>&gt; texts) {
+                <span class="local-variable">this</span>.texts = texts;
+        }
+
+        <span class="annotation">@Override</span>
+        <span class="directive">public</span> <span class="predefined-type">String</span> toString() {
+                <span class="keyword">return</span> texts.getOrDefault(Languages.getDefaultLanguage(), <span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span>);
+        }
+
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>MultiLanguageText</code> is an <code>@Embeddable</code> entity obviously, but we should note that
+it has <code>Map&lt;String, String&gt; texts</code> field whose column type is <code>jsonb</code>.
+The reason behind this is to avoid making joins for the name field of the Product entity
+while it is tightly coupled with product.</p>
+</div>
+<div class="paragraph">
+<p>Hibernate doesn&#8217;t support postgres jsonb type by default but fortunately
+there is a nice <a href="https://github.com/vladmihalcea/hibernate-types/tree/master/hibernate-types-52">library</a>
+(and a <a href="https://vladmihalcea.com/how-to-map-json-objects-using-generic-hibernate-types/">blogpost </a>for further information)
+that covers jsonb functionality with Hibernate.</p>
+</div>
+<div class="paragraph">
+<p>It is enough to add this dependency:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="xml"><span class="tag">&lt;dependency&gt;</span>
+  <span class="tag">&lt;groupId&gt;</span>com.vladmihalcea<span class="tag">&lt;/groupId&gt;</span>
+  <span class="tag">&lt;artifactId&gt;</span>hibernate-types-52<span class="tag">&lt;/artifactId&gt;</span>
+  <span class="tag">&lt;version&gt;</span>${hibernate-types-52.version}<span class="tag">&lt;/version&gt;</span>
+<span class="tag">&lt;/dependency&gt;</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>and these annotations:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="java"><span class="annotation">@TypeDef</span>(name = <span class="string"><span class="delimiter">&quot;</span><span class="content">jsonb</span><span class="delimiter">&quot;</span></span>, typeClass = JsonBinaryType.class) <i class="conum" data-value="1"></i><b>(1)</b>
+<span class="type">class</span> <span class="class">MultiLanguageText</span> {
+
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td><em>It is also applicable to package level</em></td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="java"><span class="annotation">@Type</span>(type = <span class="string"><span class="delimiter">&quot;</span><span class="content">jsonb</span><span class="delimiter">&quot;</span></span>)
+<span class="annotation">@Column</span>(columnDefinition = <span class="string"><span class="delimiter">&quot;</span><span class="content">jsonb</span><span class="delimiter">&quot;</span></span>)
+<span class="directive">private</span> <span class="predefined-type">Map</span>&lt;<span class="predefined-type">String</span>, <span class="predefined-type">String</span>&gt; texts = <span class="keyword">new</span> <span class="predefined-type">HashMap</span>&lt;&gt;();</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>When database schema created, it looks like:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="bash">demodb=# \d+ product
+                                        Table &quot;public.product&quot;
+   Column    |     Type      | Collation | Nullable | Default | Storage  | Stats target | Description
+-------------+---------------+-----------+----------+---------+----------+--------------+-------------
+ id          | bigint        |           | not null |         | plain    |              |
+ description | jsonb         |           |          |         | extended |              |
+ name        | jsonb         |           |          |         | extended |              |
+ price       | numeric(19,2) |           |          |         | main     |              |
+
+demodb=# select * from product;
+ id |                                     description                                      |                      name                      | price
+----+--------------------------------------------------------------------------------------+------------------------------------------------+-------
+  1 | {&quot;EN&quot;: &quot;A delicious fish&quot;, &quot;FR&quot;: &quot;Un poisson délicieux&quot;, &quot;TR&quot;: &quot;Lezzetli bir balık&quot;} | {&quot;EN&quot;: &quot;Fish&quot;, &quot;FR&quot;: &quot;Poisson&quot;, &quot;TR&quot;: &quot;Balık&quot;} | 13.00</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_configuration">Configuration</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In order to change <code>locale</code> programmatically, just add these beans.
+When you send a <strong>lang</strong> request parameter, <code>LocaleChangeInterceptor</code> bean will detect parameter and change the locale accordingly.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="java"><span class="annotation">@Bean</span>
+LocaleResolver localeResolver() {
+  var slr = <span class="keyword">new</span> SessionLocaleResolver();
+  slr.setDefaultLocale(<span class="predefined-type">Locale</span>.US);
+  <span class="keyword">return</span> slr;
+}
+
+<span class="annotation">@Bean</span>
+LocaleChangeInterceptor localeChangeInterceptor() {
+  var lci = <span class="keyword">new</span> LocaleChangeInterceptor();
+  lci.setParamName(<span class="string"><span class="delimiter">&quot;</span><span class="content">lang</span><span class="delimiter">&quot;</span></span>);
+  <span class="keyword">return</span> lci;
+}
+
+<span class="comment">// https://www.baeldung.com/spring-boot-internationalization</span></code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_view">View</h2>
+<div class="sectionbody">
+<div class="listingblock">
+<div class="title">products.html</div>
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="html"><span class="tag">&lt;div</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">mb-3</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+    <span class="tag">&lt;label&gt;</span>[[#{product.name}]]<span class="tag">&lt;/label&gt;</span>
+    <span class="tag">&lt;div</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">input-group</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">data-multi-language-for</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">name</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+        <span class="tag">&lt;div</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">input-group-prepend</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+            <span class="tag">&lt;select</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">form-control language-choice</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">data-multi-language-for</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">name</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+                <span class="tag">&lt;option</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">name-field-language-option</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">th:each</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">lang : ${languages}</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">th:value</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">${lang}</span><span class="delimiter">&quot;</span></span>
+                <span class="attribute-name">th:selected</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">(${lang.name()} == ${defaultLanguage})</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">th:text</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">${lang}</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span><span class="tag">&lt;/option&gt;</span>
+            <span class="tag">&lt;/select&gt;</span>
+        <span class="tag">&lt;/div&gt;</span>
+        <span class="tag">&lt;th:block</span> <span class="attribute-name">th:each</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">lang : ${languages}</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+            <span class="tag">&lt;input</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">form-control multi-language</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">th:data-lang</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">${lang}</span><span class="delimiter">&quot;</span></span>
+              <span class="attribute-name">th:classappend</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">(${lang.name()} == ${defaultLanguage}) ? 'active-lang'</span><span class="delimiter">&quot;</span></span>
+              <span class="attribute-name">th:field</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">*{name.texts[__${lang}__]}</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">type</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">text</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+        <span class="tag">&lt;/th:block&gt;</span>
+    <span class="tag">&lt;/div&gt;</span>
+<span class="tag">&lt;/div&gt;</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Above code piece is "name" part of product form. Note that the usage of name field of product entity.
+It has to be defined like <code>th:field="*{name.texts[<em>${lang}</em>]}"</code> in order to make Spring to deserialize
+to a Map object.</p>
+</div>
+<div class="paragraph">
+<p>If we inspect the rendered source code, there are input elements as many as the possible languages we defined.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="CodeRay highlight"><code data-lang="html"><span class="tag">&lt;div</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">mb-3</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+  <span class="tag">&lt;label&gt;</span>Nom<span class="tag">&lt;/label&gt;</span>
+  <span class="tag">&lt;div</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">input-group</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">data-multi-language-for</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">name</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+    <span class="tag">&lt;div</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">input-group-prepend</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+        <span class="tag">&lt;select</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">form-control language-choice</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">data-multi-language-for</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">name</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+            <span class="tag">&lt;option</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">name-field-language-option</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">value</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">TR</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>TR<span class="tag">&lt;/option&gt;</span>
+            <span class="tag">&lt;option</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">name-field-language-option</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">value</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">EN</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>EN<span class="tag">&lt;/option&gt;</span>
+            <span class="tag">&lt;option</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">name-field-language-option</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">value</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">FR</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">selected</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">selected</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>FR<span class="tag">&lt;/option&gt;</span>
+        <span class="tag">&lt;/select&gt;</span>
+    <span class="tag">&lt;/div&gt;</span>
+
+    <span class="tag">&lt;input</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">form-control multi-language</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">data-lang</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">TR</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">type</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">text</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">name</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">name.texts[TR]</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">value</span>=<span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+
+    <span class="tag">&lt;input</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">form-control multi-language</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">data-lang</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">EN</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">type</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">text</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">name</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">name.texts[EN]</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">value</span>=<span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+
+    <span class="tag">&lt;input</span> <span class="attribute-name">class</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">form-control multi-language active-lang</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">data-lang</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">FR</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">type</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">text</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">name</span>=<span class="string"><span class="delimiter">&quot;</span><span class="content">name.texts[FR]</span><span class="delimiter">&quot;</span></span> <span class="attribute-name">value</span>=<span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span><span class="tag">&gt;</span>
+
+  <span class="tag">&lt;/div&gt;</span>
+<span class="tag">&lt;/div&gt;</span></code></pre>
+</div>
+</div>
+<div class="videoblock">
+<div class="content">
+<video src="./images/usage.mp4" width="640" autoplay controls>
+Your browser does not support the video tag.
+</video>
 </div>
 </div>
 </div>
