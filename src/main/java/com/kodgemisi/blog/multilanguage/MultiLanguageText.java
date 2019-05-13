@@ -5,7 +5,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.TypeDef;
-import org.springframework.context.i18n.LocaleContextHolder;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
@@ -34,8 +33,7 @@ class MultiLanguageText implements Serializable {
 
 	@Override
 	public String toString() {
-		final var locale = LocaleContextHolder.getLocale();
-		return texts.getOrDefault(locale.getLanguage().toUpperCase(), Languages.getDefaultLanguage());
+		return texts.getOrDefault(Languages.getDefaultLanguage(), "");
 	}
 
 }

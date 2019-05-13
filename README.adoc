@@ -15,20 +15,28 @@ image::images/image2.png[Screenshot 2]
 
 ## Getting Started
 
+As shown in the above screenshot, we needed to provide users to be able to set translations
+for all possible languages. At first glance, it looks like a basic `oneToMany` relation but
+it will get harder to make joins for each field that supports i18n field.
+Then we've found that postgres has a solution for `json` data
+and combined with hibernate perfectly.
+
 _Source code link is in the footer_.
 
-### Setup a database
+## Setup a database
 
 Tested with following database version on Ubuntu `Ubuntu 18.04.2 LTS`.
 
-```bash
+[source,bash]
+----
 $ psql -V
 psql (PostgreSQL) 10.7 (Ubuntu 10.7-0ubuntu0.18.04.1)
-```
+----
 
-#### Creating a test database
+### Creating a test database
 
-```bash
+[source,bash]
+----
 $ sudo -u postgres createuser --interactive --pwprompt demouser
 could not change directory to "/your/current/dir": Permission denied
 Enter password for new role:
@@ -36,12 +44,204 @@ Enter it again:
 Shall the new role be a superuser? (y/n) n
 Shall the new role be allowed to create databases? (y/n) n
 Shall the new role be allowed to create more new roles? (y/n) n
-```
+----
 
-```bash
+[source,bash]
+----
 $ sudo -u postgres createdb -O demouser demodb
 could not change directory to "/your/current/dir": Permission denied
-```
+----
 
 NOTE: You can safely ignore `could not change directory to ...` messages. You can find the reason for it https://stackoverflow.com/a/38471243/878361[here].
 
+## Create Entities
+
+There are two entities named `Product` and `MultiLanguageText`
+
+.Product.java
+[source,java]
+----
+@TypeDef(name = "jsonb", typeClass = JsonBinaryType.class)
+@Getter
+@Setter
+@Entity
+class Product {
+
+	@Id
+	@GeneratedValue
+	private Long id;
+
+	@Embedded
+	@AttributeOverride(name = "texts", column = @Column(name = "name", columnDefinition = "jsonb"))
+	private MultiLanguageText name;
+
+	@Embedded
+	@AttributeOverride(name = "texts", column = @Column(name = "description", columnDefinition = "jsonb"))
+	private MultiLanguageText description;
+
+	private BigDecimal price;
+
+}
+----
+
+.MultiLanguageText.java
+[source,java]
+----
+@Embeddable
+@NoArgsConstructor
+@TypeDef(name = "jsonb", typeClass = JsonBinaryType.class)
+class MultiLanguageText implements Serializable {
+
+	@Type(type = "jsonb")
+	@Column(columnDefinition = "jsonb")
+	private Map<String, String> texts = new HashMap<>();
+
+	MultiLanguageText(Map<String, String> texts) {
+		this.texts = texts;
+	}
+
+	@Override
+	public String toString() {
+		return texts.getOrDefault(Languages.getDefaultLanguage(), "");
+	}
+
+}
+----
+
+`MultiLanguageText` is an `@Embeddable` entity obviously, but we should note that
+it has `Map<String, String> texts` field whose column type is `jsonb`.
+The reason behind this is to avoid making joins for the name field of the Product entity
+while it is tightly coupled with product.
+
+Hibernate doesn't support postgres jsonb type by default but fortunately
+there is a nice https://github.com/vladmihalcea/hibernate-types/tree/master/hibernate-types-52[library]
+(and a https://vladmihalcea.com/how-to-map-json-objects-using-generic-hibernate-types/[blogpost ]for further information)
+that covers jsonb functionality with Hibernate.
+
+It is enough to add this dependency:
+
+[source,xml]
+----
+<dependency>
+  <groupId>com.vladmihalcea</groupId>
+  <artifactId>hibernate-types-52</artifactId>
+  <version>${hibernate-types-52.version}</version>
+</dependency>
+----
+
+and these annotations:
+
+[source,java]
+----
+@TypeDef(name = "jsonb", typeClass = JsonBinaryType.class) // <1>
+class MultiLanguageText {
+
+}
+----
+<1> _It is also applicable to package level_
+
+[source,java]
+----
+@Type(type = "jsonb")
+@Column(columnDefinition = "jsonb")
+private Map<String, String> texts = new HashMap<>();
+----
+
+When database schema created, it looks like:
+
+[source,bash]
+----
+demodb=# \d+ product
+                                        Table "public.product"
+   Column    |     Type      | Collation | Nullable | Default | Storage  | Stats target | Description
+-------------+---------------+-----------+----------+---------+----------+--------------+-------------
+ id          | bigint        |           | not null |         | plain    |              |
+ description | jsonb         |           |          |         | extended |              |
+ name        | jsonb         |           |          |         | extended |              |
+ price       | numeric(19,2) |           |          |         | main     |              |
+
+demodb=# select * from product;
+ id |                                     description                                      |                      name                      | price
+----+--------------------------------------------------------------------------------------+------------------------------------------------+-------
+  1 | {"EN": "A delicious fish", "FR": "Un poisson délicieux", "TR": "Lezzetli bir balık"} | {"EN": "Fish", "FR": "Poisson", "TR": "Balık"} | 13.00
+
+
+----
+
+## Configuration
+
+In order to change `locale` programmatically, just add these beans.
+When you send a *lang* request parameter, `LocaleChangeInterceptor` bean will detect parameter and change the locale accordingly.
+
+[source,java]
+----
+@Bean
+LocaleResolver localeResolver() {
+  var slr = new SessionLocaleResolver();
+  slr.setDefaultLocale(Locale.US);
+  return slr;
+}
+
+@Bean
+LocaleChangeInterceptor localeChangeInterceptor() {
+  var lci = new LocaleChangeInterceptor();
+  lci.setParamName("lang");
+  return lci;
+}
+
+// https://www.baeldung.com/spring-boot-internationalization
+----
+
+
+## View
+
+.products.html
+[source,html]
+----
+<div class="mb-3">
+    <label>[[#{product.name}]]</label>
+    <div class="input-group" data-multi-language-for="name">
+        <div class="input-group-prepend">
+            <select class="form-control language-choice" data-multi-language-for="name">
+                <option class="name-field-language-option" th:each="lang : ${languages}" th:value="${lang}"
+                th:selected="(${lang.name()} == ${defaultLanguage})" th:text="${lang}"></option>
+            </select>
+        </div>
+        <th:block th:each="lang : ${languages}">
+            <input class="form-control multi-language" th:data-lang="${lang}"
+              th:classappend="(${lang.name()} == ${defaultLanguage}) ? 'active-lang'"
+              th:field="*{name.texts[__${lang}__]}" type="text">
+        </th:block>
+    </div>
+</div>
+----
+Above code piece is "name" part of product form. Note that the usage of name field of product entity.
+It has to be defined like `th:field="*{name.texts[__${lang}__]}"` in order to make Spring to deserialize
+to a Map object.
+
+If we inspect the rendered source code, there are input elements as many as the possible languages we defined.
+
+[source,html]
+----
+<div class="mb-3">
+  <label>Nom</label>
+  <div class="input-group" data-multi-language-for="name">
+    <div class="input-group-prepend">
+        <select class="form-control language-choice" data-multi-language-for="name">
+            <option class="name-field-language-option" value="TR">TR</option>
+            <option class="name-field-language-option" value="EN">EN</option>
+            <option class="name-field-language-option" value="FR" selected="selected">FR</option>
+        </select>
+    </div>
+
+    <input class="form-control multi-language" data-lang="TR" type="text" name="name.texts[TR]" value="">
+
+    <input class="form-control multi-language" data-lang="EN" type="text" name="name.texts[EN]" value="">
+
+    <input class="form-control multi-language active-lang" data-lang="FR" type="text" name="name.texts[FR]" value="">
+
+  </div>
+</div>
+----
+
+video::images/usage.mp4[width=640, options=autoplay]
